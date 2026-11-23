@@ -1,0 +1,59 @@
+# The docs site, published to GitHub Pages by .github/workflows/pages.yml.
+# Local preview: pip install -r requirements-docs.txt && mkdocs serve
+site_name: TEP architecture
+site_description: Telco Exposure & Programmability - CAMARA APIs on any 5G core
+site_url: https://pnet-software.github.io/tep-architecture/
+repo_url: https://github.com/pnet-software/tep-architecture
+repo_name: pnet-software/tep-architecture
+edit_uri: edit/main/docs/
+copyright: Copyright 2026 P-NET New Generation Emerging Networks &amp; Verticals Private Company. Apache License 2.0.
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Light mode
+
+plugins:
+  - search
+  # docs/index.md includes the repository's README.md, so the overview has one source
+  - include-markdown
+
+markdown_extensions:
+  - admonition
+  - tables
+  - attr_list
+  - toc:
+      permalink: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+nav:
+  - Overview: index.md
+  - Deploy:
+      - Deploying the demo: deploy-demo.md
+      - Adding TEP to an existing Open5GS: deploy-existing-open5gs.md
+  - Architecture:
+      - TEP contract: tep-contract.md
+      - CAMARA services: camara-services.md
+      - Element managers: element-managers.md
+      - Open5GS implementation: open5gs.md
+      - Deployment: deployment.md
+      - Design decisions: decisions.md

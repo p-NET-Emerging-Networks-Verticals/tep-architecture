@@ -39,7 +39,8 @@ flowchart LR
 |---|---|
 | [open5gs-em](https://github.com/pnet-software/open5gs-em) | The TEP API on Open5GS |
 | [open5gs-swap-events](https://github.com/pnet-software/open5gs-swap-events) | Records SIM and device swaps from Open5GS's subscribers |
-| [open5gs-em-stack](https://github.com/pnet-software/open5gs-em-stack) | One chart for the Open5GS core, open5gs-em and open5gs-swap-events |
+| [open5gs-upf](https://github.com/pnet-software/open5gs-upf) | The Open5GS UPF as a chart of its own, associating to an SMF in another release |
+| [open5gs-core-camara](https://github.com/pnet-software/open5gs-core-camara) | The demo: the Open5GS core, its UPF, open5gs-em, open5gs-swap-events and the CAMARA APIs in one release |
 
 - **open5gs-em** is one Spring Boot app. Its server interfaces are generated from the TEP
   spec, whose copy it keeps in `src/main/resources/static/openapi/`. Its only northbound
@@ -49,8 +50,10 @@ flowchart LR
   last changed. Its timestamps are when a poll saw the change: late by at most one interval,
   never early. Polling works with any MongoDB deployment, a standalone one included. A change
   stream would give exact times, but it needs a replica set.
-- **open5gs-em-stack** deploys the Open5GS core, open5gs-em and open5gs-swap-events as one
-  Helm release, wired to each other.
+- **open5gs-upf** is Gradiant's UPF chart, adapted so the UPF starts the PFCP association
+  with an SMF it's given, and so any Open5GS release can use it.
+- **open5gs-core-camara** deploys everything above, plus the CAMARA APIs, as one Helm release,
+  wired to each other.
 
 ## Where each answer comes from
 
@@ -69,9 +72,9 @@ flowchart LR
 open5gs-em acts as a 3GPP NEF for the AsSessionWithQoS API:
 
 1. **qosReference to 5QI.** The session's `qosReference`, a quality profile name, is passed to
-   the PCF, which maps it to a 5QI through its `qos_profiles` configuration. The stack
+   the PCF, which maps it to a 5QI through its `qos_profiles` configuration. The demo chart
    renders that configuration from the same list of quality profiles the EM serves, so the
-   two can't disagree.
+   two can't disagree. On an existing core, the two lists are kept in step by hand.
 2. **PCC rule.** The PCF only authorizes a 5QI for which the UE's PDU session has a PCC
    rule. Before asking the PCF, the EM gives the session one if it has none. Open5GS limits
    a session to 8 PCC rules and 4 QoS flows (so at most 3 QoS sessions per UE), and the EM
@@ -83,31 +86,37 @@ open5gs-em acts as a 3GPP NEF for the AsSessionWithQoS API:
 
 ## Deployment
 
-The core-and-EM release is `oci://registry-1.docker.io/pnetrepo/open5gs-em-stack`. It deploys
-Open5GS (AMF, AUSF, BSF, NRF, NSSF, PCF, SCP, SMF, UDM, UDR, WebUI, MongoDB), open5gs-em and
-open5gs-swap-events, wired by release name. The UPF has its own chart.
+There are two ways to run TEP on Open5GS:
 
-The stack keeps one list of quality profiles (`global.qualityProfiles`). open5gs-em serves
-it, and the PCF's `qos_profiles` is rendered from it.
+- **The demo**, [open5gs-core-camara](deploy-demo.md): one release with the Open5GS core
+  (AMF, AUSF, BSF, NRF, NSSF, PCF, SCP, SMF, UDM, UDR, WebUI, MongoDB), its UPF, open5gs-em,
+  open5gs-swap-events and the CAMARA APIs, wired by release name. It keeps one list of quality
+  profiles (`global.qualityProfiles`): open5gs-em serves it, and the PCF's `qos_profiles` is
+  rendered from it.
+- **An existing Open5GS** (2.8.0 or later): open5gs-em, open5gs-swap-events and the CAMARA APIs
+  are installed next to it, from their own charts. See
+  [Adding TEP to an existing Open5GS](deploy-existing-open5gs.md).
 
 ```mermaid
 flowchart TB
-    camara["camara chart"] -- "TEP, cluster-internal" --> em
-
-    subgraph rel_stack["open5gs-em-stack chart"]
-        em["open5gs-em"]
+    subgraph rel["open5gs-core-camara chart"]
+        camara["CAMARA APIs"]
+        em["open5gs-em (tep)"]
         swap["open5gs-swap-events"]
         core["Open5GS NFs + MongoDB"]
+        upf["UPF"]
     end
 
     gnb(["gNBs"]) -- "NGAP (NodePort)" --> core
-    upf["UPF<br/>(own chart)"] -- PFCP --> core
+    gnb -- "GTP-U" --> upf
+    camara -- "TEP, cluster-internal" --> em
+    upf -- PFCP --> core
     em --> core
     swap --> core
 ```
 
-Inside the cluster, MongoDB, the PCF SBI and the AMF/SMF metrics are ClusterIP. Only the AMF's
-NGAP (for gNBs) and the WebUI are NodePorts.
+Inside the cluster, TEP, MongoDB, the PCF SBI and the AMF/SMF metrics are ClusterIP. In the demo,
+only the AMF's NGAP (for gNBs), the WebUI and the CAMARA Swagger UI are NodePorts.
 
 ### Releases
 
@@ -115,6 +124,7 @@ NGAP (for gNBs) and the WebUI are NodePorts.
 |---|---|---|
 | open5gs-em | `vX.Y.Z` | Image `pnetrepo/open5gs-em` and chart `pnetrepo/open5gs-em-chart` |
 | open5gs-swap-events | `vX.Y.Z` | Image `pnetrepo/open5gs-swap-events` and chart `pnetrepo/open5gs-swap-events-chart` |
-| open5gs-em-stack | `vX.Y.Z` | Chart `pnetrepo/open5gs-em-stack`, which pins one version each of the em and swap-events charts |
+| open5gs-upf | `vX.Y.Z` | Chart `pnetrepo/open5gs-upf` (the image is Gradiant's `gradiant/open5gs`) |
+| open5gs-core-camara | `vX.Y.Z` | Chart `pnetrepo/open5gs-core-camara`, which pins one version each of the em, swap-events, upf and camara charts |
 
 Charts, releases and trust boundaries for the whole system are in [Deployment](deployment.md).

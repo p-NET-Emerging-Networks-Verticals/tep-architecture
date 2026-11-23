@@ -92,6 +92,15 @@ To add a core, see [Adding another core](docs/element-managers.md#adding-another
 | [Deployment](docs/deployment.md) | Charts, images, releases, and the trust boundaries in a cluster |
 | [Design decisions](docs/decisions.md) | The choices behind this architecture |
 
+## Deploying
+
+| Guide | For |
+|---|---|
+| [Deploying the demo](docs/deploy-demo.md) | Trying TEP end to end on an empty cluster: Open5GS, its UPF, TEP and the CAMARA APIs in one release |
+| [Adding TEP to an existing Open5GS](docs/deploy-existing-open5gs.md) | An Open5GS (2.8.0 or later) you already run: TEP, the swap recorder and the CAMARA APIs next to it |
+
+These docs are also published as a site: <https://pnet-software.github.io/tep-architecture/>.
+
 ## License
 
 Copyright 2026 P-NET New Generation Emerging Networks & Verticals Private Company.

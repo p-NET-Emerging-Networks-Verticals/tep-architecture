@@ -1,0 +1,5 @@
+# The docs site's build tools (mkdocs.yml). Pinned so CI builds the same site every time.
+mkdocs==1.6.1
+mkdocs-material==9.8.2
+mkdocs-include-markdown-plugin==7.3.2
+pymdown-extensions==13.1.2
