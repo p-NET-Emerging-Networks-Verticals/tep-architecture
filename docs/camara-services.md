@@ -69,8 +69,8 @@ sequenceDiagram
     participant C as API consumer
     participant Q as qualityondemand
     participant R as Redis
-    participant T as TEP (open5gs-em)
-    participant P as Open5GS PCF
+    participant T as TEP (element manager)
+    participant P as Core PCF
 
     C->>Q: POST /sessions (device, applicationServer, qosProfile, duration)
     Q->>T: GET /quality-profile/{qosProfile}
@@ -103,6 +103,8 @@ sequenceDiagram
   token and lies outside `/quality-on-demand`, so the ingress never exposes it.
 - **Visibility.** A session is visible only to the API client that created it and, with a
   three-legged token, to its subscriber.
+- **Below TEP**, how the element manager gets the core to apply the QoS is up to that core.
+  For Open5GS, see [QoS on Open5GS](open5gs.md#qos-on-open5gs).
 
 ## Correlation and logging
 

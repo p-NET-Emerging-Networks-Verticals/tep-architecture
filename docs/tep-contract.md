@@ -80,11 +80,10 @@ consumers happens a layer up, in the CAMARA services. See [Deployment](deploymen
 
 ## Keeping the spec
 
-- **One spec, identical copies.** tep-openapi holds the contract. open5gs-em
-  (`src/main/resources/static/openapi/`) and camara-tep's `tep-client`
-  (`src/main/openapi/`) keep byte-identical copies of both files, under the same names. A
-  change to the spec is copied to all three.
-- **Generated on both sides.** open5gs-em generates its server interfaces from the spec;
-  camara-tep generates its client. A change that breaks either side fails that side's build.
+- **One spec, identical copies.** tep-openapi holds the contract. Every element manager and
+  camara-tep's `tep-client` (`src/main/openapi/`) keep byte-identical copies of both files,
+  under the same names. A change to the spec is copied to all of them.
+- **Generated on both sides.** Each element manager generates its server interfaces from the
+  spec; camara-tep generates its client. A change that breaks either side fails that side's build.
 - **Semantic versioning** through `info.version`: a change that can break clients takes a
   new major version.

@@ -5,7 +5,7 @@ The choices that shape this architecture, and why.
 ## The contract is an OpenAPI spec
 
 The TEP API is one OpenAPI spec in [tep-openapi](https://github.com/pnet-software/tep-openapi).
-open5gs-em generates its server from it, and camara-tep generates its client.
+Each element manager generates its server from it, and camara-tep generates its client.
 
 **Why:** a spec is language-neutral, so an element manager for another core needn't be Java.
 It can also be read, reviewed and versioned on its own. Generating both sides means a
@@ -43,7 +43,8 @@ TEP doesn't define its own QoS API. It mounts the 3GPP TS 29.122 AsSessionWithQo
 unchanged, and quality profiles are referenced by name (`qosReference`).
 
 **Why:** it is the standard northbound API of a NEF. A core with a NEF of its own can serve
-it as is, and the Open5GS EM acts as that NEF in front of the PCF.
+it as is. For a core without one, the element manager acts as that NEF in front of the PCF
+(as [open5gs-em](open5gs.md#qos-on-open5gs) does).
 
 ## The core decides roaming
 
@@ -54,12 +55,13 @@ PLMNs its deployment is configured with.
 
 ## Swap history is a component of its own
 
-Open5GS keeps no history of IMSI or IMEISV changes. open5gs-swap-events polls the
-subscribers and records each change, and the EM only reads what it records.
+Not every core keeps a history of IMSI or IMEISV changes. When it doesn't, a swap recorder
+runs beside the element manager and records each change, and the EM only reads what it
+records.
 
-**Why:** polling works with any MongoDB deployment, a standalone one included. The cost is
-timestamps up to one poll interval late. A change stream would give exact times, but it
-needs a replica set.
+**Why:** the EM stays a reader of the core, and recording history is a separate job with its
+own release cycle. A core that keeps the history itself needs no recorder. How the Open5GS
+recorder works, and its trade-offs, is in [the Open5GS implementation](open5gs.md#repositories).
 
 ## Charts for any cluster
 

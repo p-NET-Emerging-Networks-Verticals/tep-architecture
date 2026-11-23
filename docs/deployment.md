@@ -15,14 +15,13 @@ flowchart TB
         redis[("Redis")]
     end
 
-    subgraph rel_stack["open5gs-em-stack chart"]
-        em["open5gs-em"]
-        swap["open5gs-swap-events"]
-        core["Open5GS NFs + MongoDB"]
+    subgraph rel_stack["core stack chart"]
+        em["Element manager"]
+        helpers["EM helpers<br/>(e.g. swap recorder)"]
+        core["5G core NFs + data store"]
     end
 
-    gnb(["gNBs"]) -- "NGAP (NodePort)" --> core
-    upf["UPF<br/>(own chart)"] -- PFCP --> core
+    ran(["RAN / user plane"]) --> core
 
     internet --> ingress
     ingress --> apis
@@ -30,7 +29,7 @@ flowchart TB
     apis --> redis
     apis -- "TEP, cluster-internal" --> em
     em --> core
-    swap --> core
+    helpers --> core
 ```
 
 ## The two releases
@@ -38,16 +37,22 @@ flowchart TB
 | Release | Chart | What it deploys |
 |---|---|---|
 | CAMARA APIs | `oci://registry-1.docker.io/pnetrepo/camara-chart` | Any set of the seven services, each from its own released chart. Also one Ingress host, one Swagger UI with every enabled API's spec, and Keycloak and Redis when needed, in the release or external. |
-| Core + EM | `oci://registry-1.docker.io/pnetrepo/open5gs-em-stack` | Open5GS (AMF, AUSF, BSF, NRF, NSSF, PCF, SCP, SMF, UDM, UDR, WebUI, MongoDB), open5gs-em and open5gs-swap-events, wired by release name. The UPF has its own chart. |
+| Core + EM | One stack chart per implemented core | The core's network functions, its element manager, and any helpers the EM needs, wired by release name |
 
 The camara chart reaches TEP through `global.camara.tepBaseUrl`. That URL is the only link
 between the two releases, and the only thing that changes when the core changes.
 
-The stack keeps one list of quality profiles (`global.qualityProfiles`). open5gs-em serves
-it, and the PCF's `qos_profiles` is rendered from it.
+The core stack keeps the quality profiles the EM serves in step with the QoS configuration
+of the core's policy control, so a profile name always maps to the 5QI it promises.
 
 Both charts install on any cluster with their defaults. A deployment sets its own PLMNs,
 storage class, NodePorts and Ingress host in its values file.
+
+Each core's stack chart and its specifics are on the core's page:
+
+| Core | Stack chart | Details |
+|---|---|---|
+| Open5GS | `oci://registry-1.docker.io/pnetrepo/open5gs-em-stack` | [Open5GS implementation](open5gs.md#deployment) |
 
 ## Images, charts and releases
 
@@ -58,9 +63,8 @@ publishes it to Docker Hub (`pnetrepo`), and creates a GitHub Release with its n
 |---|---|---|
 | camara-tep | `<service>-vX.Y.Z` | Image `pnetrepo/<service>` and chart `pnetrepo/<service>-chart` |
 | camara-tep | `camara-vX.Y.Z` | Chart `pnetrepo/camara-chart`, which pins one released version of each service chart |
-| open5gs-em | `vX.Y.Z` | Image `pnetrepo/open5gs-em` and chart `pnetrepo/open5gs-em-chart` |
-| open5gs-swap-events | `vX.Y.Z` | Image `pnetrepo/open5gs-swap-events` and chart `pnetrepo/open5gs-swap-events-chart` |
-| open5gs-em-stack | `vX.Y.Z` | Chart `pnetrepo/open5gs-em-stack`, which pins one version each of the em and swap-events charts |
+| An element manager or helper | `vX.Y.Z` | Image `pnetrepo/<component>` and chart `pnetrepo/<component>-chart` |
+| A core stack | `vX.Y.Z` | Chart `pnetrepo/<core>-em-stack`, which pins one version of each EM and helper chart |
 
 Upgrading a component in a deployment therefore takes two steps. Release the component,
 then bump its pinned version in the umbrella chart (camara or stack) and release that.
@@ -73,7 +77,7 @@ then bump its pinned version in the umbrella chart (camara or stack) and release
 | Actuator (health, metrics) | Its own management port, which the Ingress never exposes |
 | CAMARA services → TEP | **None.** TEP is cluster-internal and unauthenticated. It returns subscriber credentials, so it must never be exposed. |
 | TEP → CAMARA QoD notifications | **None.** `/tep-notifications` is outside the Ingress's paths. |
-| open5gs-em → Open5GS | Cluster-internal: MongoDB, PCF SBI and AMF/SMF metrics are ClusterIP |
-| Outside → core | Only the AMF's NGAP (for gNBs) and the WebUI are NodePorts |
+| Element manager → core | Cluster-internal. The core's data store, SBI and metrics endpoints stay ClusterIP. |
+| Outside → core | Only what the RAN needs (NGAP for gNBs) and any operator UI the core ships. Each core's page lists its exposed ports. |
 
 Phone numbers never appear in URLs on any hop, and the services mask them in logs.

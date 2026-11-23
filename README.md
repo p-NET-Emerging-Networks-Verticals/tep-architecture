@@ -8,7 +8,7 @@ It does this with one contract in the middle, the **TEP API**:
 - **Above it**, the CAMARA services translate CAMARA requests into TEP calls. They know nothing
   about the core.
 - **Below it**, each 5G core has an **element manager** that serves the TEP API from that
-  core's own data and network functions. Open5GS is the reference implementation.
+  core's own data and network functions.
 
 Swapping the core means deploying another element manager behind the same contract. The
 CAMARA services don't change.
@@ -28,17 +28,13 @@ flowchart LR
     end
     redis[("Redis")]
 
-    subgraph em5gc["Open5GS element manager"]
-        direction TB
-        em["open5gs-em<br/>serves TEP"]
-        swap["open5gs-swap-events"]
-    end
+    em["Element manager<br/>serves TEP"]
 
-    subgraph core["Open5GS 5G core"]
+    subgraph core["5G core"]
         direction TB
-        mongo[("MongoDB")]
-        amf["AMF / SMF<br/>ue-info, pdu-info"]
-        pcf["PCF"]
+        data[("Subscriber data")]
+        nfs["Network functions<br/>UE state, PDU sessions"]
+        pcf["Policy control"]
     end
 
     consumer -- "CAMARA APIs<br/>OAuth2 token" --> camara
@@ -46,15 +42,14 @@ flowchart LR
     camara -- "TEP API 1.0.0" --> em
     qod --- redis
     qod -- "CloudEvents" --> sink
-    em --> mongo
-    em --> amf
-    em -- "Npcf_PolicyAuthorization" --> pcf
-    swap --> mongo
+    em --> data
+    em --> nfs
+    em --> pcf
 ```
 
-The [TEP contract](https://github.com/pnet-software/tep-openapi) is an OpenAPI spec. The
-element manager's server and the CAMARA services' TEP client are both generated from it, so
-the two sides can't drift apart.
+The [TEP contract](https://github.com/pnet-software/tep-openapi) is an OpenAPI spec. Every
+element manager's server and the CAMARA services' TEP client are generated from it, so the
+two sides can't drift apart.
 
 ## Repositories
 
@@ -63,9 +58,9 @@ the two sides can't drift apart.
 | [tep-openapi](https://github.com/pnet-software/tep-openapi) | Contract | The TEP API spec and the 3GPP AsSessionWithQoS bundle it references |
 | [tep-architecture](https://github.com/pnet-software/tep-architecture) | | These docs |
 | [camara-tep](https://github.com/pnet-software/camara-tep) | Northbound | The CAMARA services, their shared libraries, a chart per service and an umbrella chart |
-| [open5gs-em](https://github.com/pnet-software/open5gs-em) | Southbound | open5gs-em: the TEP API on Open5GS |
-| [open5gs-swap-events](https://github.com/pnet-software/open5gs-swap-events) | Southbound | Records SIM and device swaps from Open5GS's subscribers |
-| [open5gs-em-stack](https://github.com/pnet-software/open5gs-em-stack) | Deployment | One chart for the Open5GS core, open5gs-em and open5gs-swap-events |
+
+Each implemented core adds its own southbound repositories (element manager, helpers and
+deployment chart). They're listed on the core's page.
 
 ## CAMARA APIs
 
@@ -79,7 +74,13 @@ the two sides can't drift apart.
 | QoS Profiles | v1.1.0 | `qosprofiles` | `GET /quality-profile`, `GET /quality-profile/{name}` |
 | Quality-On-Demand | v1.1.0 | `qualityondemand` | Quality profiles, subscriber status, and 3GPP AS sessions with QoS |
 
-All seven run on Open5GS through open5gs-em.
+## Implemented cores
+
+| Core | Element manager | CAMARA APIs | Details |
+|---|---|---|---|
+| Open5GS | [open5gs-em](https://github.com/pnet-software/open5gs-em) | All seven | [Open5GS implementation](docs/open5gs.md) |
+
+To add a core, see [Adding another core](docs/element-managers.md#adding-another-core).
 
 ## Read more
 
@@ -87,6 +88,6 @@ All seven run on Open5GS through open5gs-em.
 |---|---|
 | [TEP contract](docs/tep-contract.md) | What the TEP API offers, its conventions, and how the spec is kept and versioned |
 | [CAMARA services](docs/camara-services.md) | How a CAMARA request becomes TEP calls: security, Quality-On-Demand, correlation and logging |
-| [Element managers](docs/element-managers.md) | What a core must provide to serve TEP, the Open5GS implementation, and adding another core |
+| [Element managers](docs/element-managers.md) | What a core must provide to serve TEP, and adding another core |
 | [Deployment](docs/deployment.md) | Charts, images, releases, and the trust boundaries in a cluster |
 | [Design decisions](docs/decisions.md) | The choices behind this architecture |
