@@ -89,6 +89,17 @@ open5gs-em acts as a 3GPP NEF for the AsSessionWithQoS API:
 4. **Termination.** When the PCF ends an app session, it notifies the EM. The EM notifies
    the application server at `{notificationDestination}/notifications`.
 
+## Tested with
+
+TEP and the CAMARA APIs have been tested end to end on Open5GS with a real radio network and commercial phones,
+in 5G standalone (SA) mode:
+
+| | |
+|---|---|
+| **Core** | Open5GS 2.8 (`gradiant/open5gs:2.8.0`); the UPF on Open5GS 2.7.2 |
+| **Radio** | Amarisoft Callbox (gNB) |
+| **Phones** | Samsung Galaxy A52s 5G, Samsung Galaxy S25 FE, OnePlus Nord N10 5G, Google Pixel 9a |
+
 ## Deployment
 
 There are two ways to run TEP on Open5GS:

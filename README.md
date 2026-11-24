@@ -80,6 +80,9 @@ deployment chart). They're listed on the core's page.
 |---|---|---|---|
 | Open5GS | [open5gs-em](https://github.com/pnet-software/open5gs-em) | All seven | [Open5GS implementation](docs/open5gs.md) |
 
+Tested end to end on Open5GS 2.8 with an Amarisoft Callbox and commercial 5G SA phones: see
+[Tested with](docs/open5gs.md#tested-with).
+
 To add a core, see [Adding another core](docs/element-managers.md#adding-another-core).
 
 ## Read more
