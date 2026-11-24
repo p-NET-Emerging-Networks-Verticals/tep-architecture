@@ -80,7 +80,12 @@ open5gs-em acts as a 3GPP NEF for the AsSessionWithQoS API:
    a session to 8 PCC rules and 4 QoS flows (so at most 3 QoS sessions per UE), and the EM
    enforces both.
 3. **Rates and ARP** come from the quality profile's fields and are sent in the media
-   component.
+   component. Rates go for GBR 5QIs only: a non-GBR QoS flow has no flow bit rates, and the
+   PCC rule TEP gives a non-GBR 5QI has none either. A profile's ARP (`priority` through
+   `reservation_priorities`, and its pre-emption fields) needs a PCF with AF-requested ARP,
+   [Open5GS PR #4793](https://github.com/open5gs/open5gs/pull/4793) (`main`, or the release after
+   2.8.0). Open5GS 2.8.0 ignores it and copies the PCC rule's ARP, which TEP sets to a safe
+   fallback: priority level 15, no pre-emption of other flows, pre-emptable.
 4. **Termination.** When the PCF ends an app session, it notifies the EM. The EM notifies
    the application server at `{notificationDestination}/notifications`.
 

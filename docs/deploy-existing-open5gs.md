@@ -46,7 +46,8 @@ flowchart LR
 | **Open5GS 2.8.0 or later** (e.g. the `gradiant/open5gs:2.8.0` image) for the AMF, SMF and PCF | The version TEP is built and tested against |
 | The **AMF and SMF metrics servers** on, reachable from TEP (port 9090) | TEP reads UE state from the AMF's `/ue-info` and PDU sessions from the SMF's `/pdu-info` |
 | The **PCF's SBI** reachable from TEP (port 7777) | Quality-On-Demand sessions are PCF app sessions (Npcf_PolicyAuthorization) |
-| The **PCF's `qos_profiles` and `reservation_priorities`** set, matching TEP's quality profiles | The PCF turns a profile name into a 5QI, and a priority band into an ARP level |
+| The **PCF's `qos_profiles`** set, matching TEP's quality profiles | The PCF turns a profile name into a 5QI |
+| For profile ARP: a PCF with AF-requested ARP ([Open5GS PR #4793](https://github.com/open5gs/open5gs/pull/4793), on `main` or in the release after 2.8.0), with `reservation_priorities` | Only that PCF applies a profile's `priority` and pre-emption. On 2.8.0, every QoS session gets TEP's fallback ARP: level 15, no pre-emption, pre-emptable |
 | **Read and write access** to the Open5GS database in MongoDB | TEP reads subscribers and adds PCC rules to their sessions; it and swap-events keep collections of their own there |
 | The **PCF able to reach TEP** in the cluster | The PCF notifies TEP when the network ends a QoS session |
 
@@ -76,15 +77,26 @@ pcf:
       qos_index: 1             # its 5QI
     - reference: QOS_5
       qos_index: 5
-  reservation_priorities:      # TEP bands a profile's priority (1-100) into PRIO_16 (highest) ... PRIO_1
-    - res_prio: PRIO_16        # priority 1-7
-      priority_level: 1        # ARP priority level
-    - res_prio: PRIO_13        # priority 20-25
-      priority_level: 4
 ```
 
 Every profile in step 2 needs an entry here under its name. A name the PCF doesn't know makes session requests for
-it fail. [QoS on Open5GS](open5gs.md#qos-on-open5gs) explains how TEP uses both lists.
+it fail.
+
+With a PCF that has AF-requested ARP (Open5GS `main`, or the release after 2.8.0), also map every reservation
+priority band to an ARP priority level. TEP bands a profile's `priority` (1-100) into `PRIO_16` (highest) to
+`PRIO_1`; a band left out keeps TEP's fallback level, 15. Open5GS 2.8.0 doesn't know this setting and ignores it.
+
+```yaml
+pcf:
+  reservation_priorities:      # all 16 bands; levels 9-15 leave 1-8 to the operator's own priority services
+    - { res_prio: PRIO_16, priority_level: 9 }    # profile priority 1-7
+    - { res_prio: PRIO_15, priority_level: 9 }    # 8-13
+    # ... one entry per band ...
+    - { res_prio: PRIO_1, priority_level: 15 }    # 95-100
+```
+
+The open5gs-core-camara chart's `values.yaml` has the full list. [QoS on Open5GS](open5gs.md#qos-on-open5gs) explains
+how TEP uses these settings.
 
 ## 1. Gather the addresses
 
@@ -117,22 +129,21 @@ homePlmns:
   - "00101"
 # The quality profiles TEP offers. Each name and fiveQi must be in the PCF's qos_profiles
 qualityProfiles:
-  - name: QOS_1
+  - name: QOS_1                # GBR: all four rates are required, each minimum no higher than its maximum
     fiveQi: 1
     description: GBR flow with 5QI 1
     status: ACTIVE
     maxUpstreamRate: { value: 40, unit: Mbps }
     maxDownstreamRate: { value: 40, unit: Mbps }
     targetMinDownstreamRate: { value: 10, unit: Mbps }
+    targetMinUpstreamRate: { value: 10, unit: Mbps }
     priority: 5
     preemptionCapability: NOT_PREEMPT
     preemptionVulnerability: PREEMPTABLE
-  - name: QOS_5
+  - name: QOS_5                # non-GBR: no bit rates, its flow is limited by the Session-AMBR and UE-AMBR
     fiveQi: 5
     description: Non-GBR flow with 5QI 5
     status: ACTIVE
-    maxUpstreamRate: { value: 40, unit: Mbps }
-    maxDownstreamRate: { value: 40, unit: Mbps }
     priority: 22
     preemptionCapability: NOT_PREEMPT
     preemptionVulnerability: PREEMPTABLE
